@@ -15,7 +15,7 @@ console.log('Transferoute_bot initializing...');
             if (tgHelpers.getTextFromUpdate(update)) {
                 await telegramBot.sendMessage(
                     tgHelpers.getChatIdFromUpdate(update),
-                    stationsService.search( tgHelpers.getTextFromUpdate(update) ),
+                    stationsService.search( tgHelpers.getTextFromUpdate(update) ) + ' ' + tgHelpers.getTextFromUpdate(update),
                 );
             }
         } catch (err) {
