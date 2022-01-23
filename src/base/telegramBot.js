@@ -74,12 +74,14 @@ function TelegramBot (options = {}) {
     }
 
     /////////////////////////////////////// CheckUpdates ///////////////////////////////////////////////////////////////
-    function listen(handler = () => {}) {
+    let handler = () => {};
+
+    function listen() {
         axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${currentOffset}`)
             .then(async response => {
                 const updates = response.data.result;
 
-                console.log('updates', updates)
+                console.log('updates', updates);
 
                 await Promise.all(updates.map(async update => {
                     await handler(update);
@@ -92,14 +94,18 @@ function TelegramBot (options = {}) {
                 error.response && console.log('RESPONSE DATA:', error.response.data);
             })
             .finally(() => {
-                setTimeout(tgCheckUpdates, CHECK_UPDATES_INTERVAL);
+                setTimeout(listen, CHECK_UPDATES_INTERVAL);
             });
     }
 
+    function initialize (_handler) {
+        handler = _handler;
+        listen();
+    }
 
     return {
         sendMessage,
-        listen,
+        initialize,
     };
 }
 
