@@ -16,7 +16,7 @@ telegramBot.listen(async (update) => {
     if (tgHelpers.getTextFromUpdate(update)) {
         await telegramBot.sendMessage(
             tgHelpers.getChatIdFromUpdate(update),
-            tgHelpers.getTextFromUpdate(update) + ' *' + tgHelpers.getTextFromUpdate(update) + '*'
+            tgHelpers.getTextFromUpdate(update) + ' ... *' + tgHelpers.getTextFromUpdate(update) + '*'
         );
     }
 });
