@@ -13,9 +13,27 @@ console.log('Transferoute_bot initializing...');
     telegramBot.initialize(async (update) => {
         try {
             if (tgHelpers.getTextFromUpdate(update)) {
+                const objs = stationsService.search( tgHelpers.getTextFromUpdate(update) );
+
+                console.log('OOOO', objs);
+                if (!objs.length) {
+                    await telegramBot.sendMessage(
+                        tgHelpers.getChatIdFromUpdate(update),
+                        'empty'
+                    );
+
+                    return;
+                }
+
+
+                const text = objs.map(({ station, settlement }) => {
+                    return '🚈 ' + station.title + ' (*' + settlement.title +'*)'
+                }).join('\n');
+
+
                 await telegramBot.sendMessage(
                     tgHelpers.getChatIdFromUpdate(update),
-                    stationsService.search( tgHelpers.getTextFromUpdate(update) ) + ' ' + tgHelpers.getTextFromUpdate(update),
+                    text
                 );
             }
         } catch (err) {
