@@ -14,10 +14,6 @@ const initialize = async () => {
     console.time('getAllStations');
     await getAllStations();
     console.timeEnd('getAllStations');
-
-    console.log('STATIONS starts here', Object.keys(stations));
-
-    search('Турист');
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -41,11 +37,8 @@ const search = (needle) => {
                 settlement.stations.forEach(station => {
                     // console.log('_stations', station.title);
 
-                    if (station.title.toLowerCase().includes(needle.toLowerCase()) && station.transport_type == 'train') {
-                        console.log('WIN', station);
-                        console.log(settlement.title)
-
-                        result.push({ station, settlement });
+                    if (station.title.toLowerCase().includes(needle.toLowerCase())) {
+                        result.push({ country, region, settlement, station });
                     }
                 })
             });
