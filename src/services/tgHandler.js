@@ -16,24 +16,23 @@ const TRANSPORT_TYPE_EMOJI_MAP = {
     helicopter: '🚁',
 };
 
+const stationObjectToFullNameFormatter = ({ country, region, settlement, station }) =>
+    [
+        TRANSPORT_TYPE_EMOJI_MAP[station.transport_type] || station.transport_type,
+        `*${station.title}*`,
+        '(' + [ region.title, settlement.title ].filter(v => v).map(v => `__${v}__`).join(' / ') + ')',
+    ]
+        .join(' ');
+
 const handler = (telegramBot) => async (update) => {
     if (tgh.getTextFromUpdate(update)) {
-        const objs = raspStationsService.search( tgh.getTextFromUpdate(update) );
-        ///console.log('search result', objs);
+        const stationObjects = raspStationsService.search( tgh.getTextFromUpdate(update) );
+        ///console.log('search result', stationObjects);
 
-        if (objs.length) {
-            const message = objs
-                .map(
-                    ({ country, region, settlement, station }) => [
-                        TRANSPORT_TYPE_EMOJI_MAP[station.transport_type] || station.transport_type,
-                        `*${station.title}*`,
-                        '(' + [ region.title, settlement.title ].filter(v => v).map(v => `__${v}__`).join(' / ') + ')',
-                    ]
-                    .join(' ')
-                )
+        if (stationObjects.length) {
+            const message = stationObjects
+                .map(stObj => stationObjectToFullNameFormatter(stObj) + ' /add\\_' + stObj.station.codes.yandex_code)
                 .join('\n');
-
-            /// return station.transport_type + ' ' + station.title + ' (*' + settlement.title +'*)'
 
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
