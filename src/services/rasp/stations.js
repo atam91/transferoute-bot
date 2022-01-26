@@ -1,13 +1,13 @@
 const fs = require('fs');
 const fsp = fs.promises;
 
-let stations = null;
+let stationsStructure = null;
 
 const getAllStations = async () => {
     const file = await fsp.readFile('./data/stations_list.json');
-    stations = JSON.parse(file.toString());
+    stationsStructure = JSON.parse(file.toString());
 
-    return stations;
+    return stationsStructure;
 };
 
 const initialize = async () => {
@@ -16,27 +16,24 @@ const initialize = async () => {
     console.timeEnd('getAllStations');
 };
 
-////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    # stationsStructure
+        countries(title)
+            regions(title)
+                settlements(title)
+                    stations(station_type, title, codes.yandex_code)
+ */
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const search = (needle) => {
-    console.log('searching... ' + needle);
-
-    const data = stations;
     const result = [];
 
     console.time('search');
-    data.countries.forEach(country => {
-        // console.log('COUNTRY', country.title);
-
+    stationsStructure.countries.forEach(country => {
         country.regions.forEach(region => {
-            // console.log('_region', region.title);
-
             region.settlements.forEach(settlement => {
-                // console.log('_city', settlement.title);
-
                 settlement.stations.forEach(station => {
-                    // console.log('_stations', station.title);
-
                     if (station.title.toLowerCase().includes(needle.toLowerCase())) {
                         result.push({ country, region, settlement, station });
                     }
@@ -46,14 +43,29 @@ const search = (needle) => {
     });
     console.timeEnd('search');
 
-    /*
+    return result;
+};
 
-    countries
-        regions
-            settlements(title)
-                stations(station_type, title, codes.yandex_code)
+const getByYandexCode = (yandexCode) => {
+    let result = null;
 
-     */
+    console.time('getByYandexCode');
+    stationsStructure.countries.every(country => {
+        return country.regions.every(region => {
+            return region.settlements.every(settlement => {
+                return settlement.stations.every(station => {
+                    if (station.codes.yandex_code == yandexCode) {
+                        result = { country, region, settlement, station };
+
+                        return false;
+                    }
+
+                    return true;
+                })
+            });
+        });
+    });
+    console.timeEnd('getByYandexCode');
 
     return result;
 };
@@ -62,4 +74,5 @@ const search = (needle) => {
 module.exports = {
     initialize,
     search,
+    getByYandexCode,
 };

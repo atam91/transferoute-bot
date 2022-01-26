@@ -25,7 +25,24 @@ const stationObjectToFullNameFormatter = ({ country, region, settlement, station
         .join(' ');
 
 const handler = (telegramBot) => async (update) => {
-    if (tgh.getTextFromUpdate(update)) {
+    if (!tgh.getTextFromUpdate(update)) return;
+
+    if (tgh.getTextFromUpdate(update).startsWith('/add')) {
+        const yaCode = tgh.getTextFromUpdate(update).split('_')[1];
+        const stObj = raspStationsService.getByYandexCode(yaCode);
+
+        if (stObj) {
+            await telegramBot.sendMessage(
+                tgh.getChatIdFromUpdate(update),
+                stationObjectToFullNameFormatter(stObj)
+            );
+        } else {
+            await telegramBot.sendMessage(
+                tgh.getChatIdFromUpdate(update),
+                '🤷🏼‍♂️ Could not find any station'
+            );
+        }
+    } else {
         const stationObjects = raspStationsService.search( tgh.getTextFromUpdate(update) );
         ///console.log('search result', stationObjects);
 
