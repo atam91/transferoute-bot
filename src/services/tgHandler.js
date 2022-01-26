@@ -24,18 +24,36 @@ const stationObjectToFullNameFormatter = ({ country, region, settlement, station
     ]
         .join(' ');
 
+const getYandexCodeFromContainingUpdate = update => tgh.getTextFromUpdate(update).split('_')[1];
+
 const handler = (telegramBot) => async (update) => {
     // console.log('UPDATE', JSON.stringify(update, null, 4));
     if (!tgh.getTextFromUpdate(update)) return;
 
     if (tgh.getTextFromUpdate(update).startsWith('/add')) {
-        const yaCode = tgh.getTextFromUpdate(update).split('_')[1];
-        const stObj = raspStationsService.getByYandexCode(yaCode);
+        const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
 
         if (stObj) {
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
                 stationObjectToFullNameFormatter(stObj)
+            );
+        } else {
+            await telegramBot.sendMessage(
+                tgh.getChatIdFromUpdate(update),
+                '🤷🏼‍♂️ Could not find any station'
+            );
+        }
+    } else if (tgh.getTextFromUpdate(update).startsWith('/where')) {
+        const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+
+        if (stObj) {
+            await telegramBot.sendLocation(
+                tgh.getChatIdFromUpdate(update),
+                {
+                    latitude: stObj.station.latitude,
+                    longitude: stObj.station.longitude,
+                }
             );
         } else {
             await telegramBot.sendMessage(
@@ -49,7 +67,14 @@ const handler = (telegramBot) => async (update) => {
 
         if (stationObjects.length) {
             const message = stationObjects
-                .map(stObj => stationObjectToFullNameFormatter(stObj) + ' /add\\_' + stObj.station.codes.yandex_code)
+                .map(stObj =>
+                    [
+                        stationObjectToFullNameFormatter(stObj),
+                        '/add\\_' + stObj.station.codes.yandex_code,
+                        '/where\\_' + stObj.station.codes.yandex_code,
+                    ]
+                    .join(' ')
+                )
                 .join('\n');
 
             await telegramBot.sendMessage(

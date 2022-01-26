@@ -40,6 +40,7 @@ function TelegramBot (options = {}) {
                     chat_id: chatId,
                     parse_mode: 'Markdown',
                     text,
+                    reply_to_message_id: options.replyToMessageId || null,
                     reply_markup: options.keyboard
                         ? {
                             resize_keyboard: true,
@@ -73,6 +74,28 @@ function TelegramBot (options = {}) {
         }
     }
 
+    async function sendLocation(chatId, { latitude, longitude }, options = {}) {
+        axios.post(
+            `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendLocation`,
+            {
+                chat_id: chatId,
+                latitude,
+                longitude,
+                reply_markup: options.keyboard
+                    ? {
+                        resize_keyboard: true,
+                        one_time_keyboard: true,
+                        keyboard: options.keyboard,
+                    }
+                    : { remove_keyboard: true },
+            }
+        )
+            .catch(function (error) {
+                console.log('sendLocation AXIOS ERROR:' + error);
+                console.log('RESPONSE DATA:', error.response.data);
+            });
+    }
+
     /////////////////////////////////////// CheckUpdates ///////////////////////////////////////////////////////////////
     let handler = () => {};
 
@@ -103,6 +126,7 @@ function TelegramBot (options = {}) {
 
     return {
         sendMessage,
+        sendLocation,
         initialize,
     };
 }
