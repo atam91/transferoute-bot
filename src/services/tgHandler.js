@@ -25,6 +25,7 @@ const stationObjectToFullNameFormatter = ({ country, region, settlement, station
         .join(' ');
 
 const handler = (telegramBot) => async (update) => {
+    // console.log('UPDATE', JSON.stringify(update, null, 4));
     if (!tgh.getTextFromUpdate(update)) return;
 
     if (tgh.getTextFromUpdate(update).startsWith('/add')) {

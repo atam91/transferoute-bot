@@ -81,8 +81,6 @@ function TelegramBot (options = {}) {
             .then(async response => {
                 const updates = response.data.result;
 
-                console.log('updates', updates);
-
                 await Promise.all(updates.map(async update => {
                     await handler(update);
 

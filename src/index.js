@@ -14,7 +14,8 @@ console.log('Transferoute_bot initializing...');
         try {
             await tgHandler(telegramBot)(update);
         } catch (err) {
-            console.log('tgBotHandler error', err)
+            console.log('tgBotHandler error', err);
+            throw err;  // fixme?? NOT!!!
         }
     });
     console.log('Transferoute_bot listenning');
