@@ -31,7 +31,7 @@ const initialize = async () => {
 const search = (needle, filters) => {
     const result = [];
 
-    const denyTransportType = new Set(filters.denyTransportType)
+    const denyTransportType = filters ? new Set(filters.denyTransportType || []) : new Set();
 
     console.time('search');
     stationsStructure.countries.forEach(country => {
