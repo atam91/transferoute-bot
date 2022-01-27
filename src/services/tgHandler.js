@@ -13,127 +13,179 @@ rxdb.initialize() /// fixme? not pretty
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const DELIMITER = '::';
+const genStateLine = function() {
+    return [].join.call(arguments, DELIMITER);
+};
+const parseStateLine = function(line) {
+    return line.split(DELIMITER);
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 const getYandexCodeFromContainingUpdate = update => tgh.getTextFromUpdate(update).split('_')[1];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const STATE_HANDLERS = {
+    search: (telegramBot) => async ({ update, user }) => {
+        if (!tgh.getTextFromUpdate(update)) return;
+
+        if (tgh.getTextFromUpdate(update).startsWith('/add')) {
+            const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+
+            if (stObj) {
+                await user.update({
+                    $push: {
+                        favoriteStations: stObj.station.codes.yandex_code,
+                    }
+                });
+
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.stationAdded({ stObj, user })
+                );
+            } else {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.stationNotFoundDueManipulation({ user })
+                );
+            }
+        } else if (tgh.getTextFromUpdate(update).startsWith('/drop')) {
+            const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+
+            if (stObj) {
+                await user.update({
+                    $set: {
+                        favoriteStations: user.get('favoriteStations').filter(code => code !== stObj.station.codes.yandex_code),
+                    }
+                });
+
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.stationDropped({ stObj, user })
+                );
+            } else {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.stationNotFoundDueManipulation({ user })
+                );
+            }
+        } else if (tgh.getTextFromUpdate(update).startsWith('/where')) {
+            const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+
+            if (stObj && stObj.station.latitude && stObj.station.longitude) {
+                await telegramBot.sendLocation(
+                    tgh.getChatIdFromUpdate(update),
+                    {
+                        latitude: stObj.station.latitude,
+                        longitude: stObj.station.longitude,
+                    }
+                );
+            } else if (!stObj.station.latitude || !stObj.station.longitude) {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.unknownGeolocation()
+                );
+            } else {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.unknownStation()
+                );
+            }
+        } else {
+            const stationObjects = raspStationsService.search( tgh.getTextFromUpdate(update) );
+            ///console.log('search result', stationObjects);
+
+            if (stationObjects.length) {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.foundStations({ stationObjects, user })
+                );
+            } else {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    messagesService.stationNotFoundAndUserStations({ user })
+                );
+            }
+        }
+    },
+
+    filters: (telegramBot) => async ({ update, user }) => {
+        const text = tgh.getTextFromUpdate(update);
+        if (text.startsWith('вкл')) {
+
+        } else if (text.startsWith('выкл')) {
+            const transport = text.split(' ').reverse()[0];
+            user.update({
+                $push: {
+                    'filters.denyTransportType': transport
+                }
+            });
+        }
+
+        await telegramBot.sendMessage(
+            tgh.getChatIdFromUpdate(update),
+            messagesService.filtersMode({ user })
+        );
+    },
+};
+
 const handler = (telegramBot) => async (update) => {
     const db = rxdb.getDb();
+
+    console.log('UPDATE', JSON.stringify(update, null, 4));
 
     const user = await db.users.findOne({
         selector: {
             userId: tgh.getChatIdFromUpdate(update)
         }
     }).exec();
-    ///console.log('USER', user);
     if (!user) {
         await db.users.insert({
             id: tgh.getChatIdFromUpdate(update).toString(),
             userId: tgh.getChatIdFromUpdate(update),
+            state: 'search',
         })
-    } else {
-        /* console.log('id', user.get('id'));
-        console.log('uId', user.get('userId'));
-        console.log('favoriteStations', user.get('favoriteStations'));
-        const filters = user.get('filters');
-        console.log('filters', filters);
-        console.log('filters.denyTransportType', filters.denyTransportType);
-        console.log('filters.geolocation', filters.geolocation); */
     }
 
-    /*await user.update({
-        $push: {
-            'filters.denyTransportType': 'jkl',
-        }
-    });*/
+    if (!user.get('state')) {                                               //// todo drop later
+        await user.update({
+            $set: {
+                'state': 'search',
+            }
+        });
+    }
 
-    /*await user.update({
-        $set: {
-            'filters.denyTransportType': undefined,
-        }
-    });*/
+    if (update.message.entities && update.message.entities[0].type === 'bot_command') {
+        const botCmdEntity = update.message.entities[0];
+        const cmd = update.message.text.substr(botCmdEntity.offset + 1, botCmdEntity.length);
 
-    // console.log('UPDATE', JSON.stringify(update, null, 4));
-    if (!tgh.getTextFromUpdate(update)) return;
+        console.log('CMD', cmd);
 
-    if (tgh.getTextFromUpdate(update).startsWith('/add')) {
-        const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
-
-        if (stObj) {
-            await user.update({
-                $push: {
-                    favoriteStations: stObj.station.codes.yandex_code,
-                }
-            });
-
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.stationAdded({ stObj, user })
-            );
-        } else {
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.stationNotFoundDueManipulation({ user })
-            );
-        }
-    } else if (tgh.getTextFromUpdate(update).startsWith('/drop')) {
-        const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
-
-        if (stObj) {
+        if (STATE_HANDLERS[cmd]) {
             await user.update({
                 $set: {
-                    favoriteStations: user.get('favoriteStations').filter(code => code !== stObj.station.codes.yandex_code),
+                    'state': cmd,
                 }
             });
-
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.stationDropped({ stObj, user })
-            );
-        } else {
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.stationNotFoundDueManipulation({ user })
-        );
         }
-    } else if (tgh.getTextFromUpdate(update).startsWith('/where')) {
-        const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+    }
 
-        if (stObj && stObj.station.latitude && stObj.station.longitude) {
-            await telegramBot.sendLocation(
-                tgh.getChatIdFromUpdate(update),
-                {
-                    latitude: stObj.station.latitude,
-                    longitude: stObj.station.longitude,
-                }
-            );
-        } else if (!stObj.station.latitude || !stObj.station.longitude) {
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.unknownGeolocation()
-            );
-        } else {
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.unknownStation()
-            );
-        }
+    const userStateLine = user.get('state');
+    console.log('userStateLine', userStateLine);
+
+    const [ state, ...userStateArgs ] = parseStateLine(userStateLine);
+
+    const handler = STATE_HANDLERS[state];
+    if (handler) {
+        await handler(telegramBot)({ user, update }, ...userStateArgs);
     } else {
-        const stationObjects = raspStationsService.search( tgh.getTextFromUpdate(update) );
-        ///console.log('search result', stationObjects);
-
-        if (stationObjects.length) {
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.foundStations({ stationObjects, user })
-            );
-        } else {
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                messagesService.stationNotFoundAndUserStations({ user })
-            );
-        }
+        await telegramBot.sendMessage(
+            tgh.getChatIdFromUpdate(update),
+            '⚠️ some state error ⚠️'
+        );
     }
 };
 

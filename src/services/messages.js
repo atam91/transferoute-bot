@@ -73,11 +73,42 @@ const foundStations = ({ stationObjects, user }) => {
                 .filter(v => v)
                 .join(' ')
         )
+        .concat( '\nДля уточнения поиска можно настроить фильтры /filters' )
         .join('\n');
 
     return text;
 };
 
+
+const filtersMode = ({ user }) => {
+    const filters = user.get('filters');
+    const denyTransportType = filters.denyTransportType || [];
+
+    return {
+        text: [
+            'Фильтры поиска::\n',
+            ...Object.keys(TRANSPORT_TYPE_EMOJI_MAP).map(transportType =>
+                [
+                    denyTransportType.includes(transportType) ? NO_MARK : YES_MARK,
+                    TRANSPORT_TYPE_EMOJI_MAP[transportType],
+                    `*${transportType}*`,
+                ].join(' ')
+            ),
+            '\n вернуться в режим поиска /search'
+        ].join('\n'),
+
+        keyboard: Object.keys(TRANSPORT_TYPE_EMOJI_MAP).map(transportType => {
+            return [
+                [
+                    denyTransportType.includes(transportType) ? 'включить' : 'выключить',
+                    TRANSPORT_TYPE_EMOJI_MAP[transportType],
+                    transportType,
+                ]
+                    .join(' ')
+            ];
+        })
+    };
+};
 
 module.exports = {
     stationAdded,
@@ -87,6 +118,7 @@ module.exports = {
     unknownStation,
     unknownGeolocation,
     foundStations,
+    filtersMode,
 };
 
 

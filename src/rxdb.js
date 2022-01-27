@@ -7,7 +7,7 @@ addPouchPlugin(require('pouchdb-adapter-leveldb')); // leveldown adapters need t
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const USERS_SCHEMA = {
     title: "users schema",
-    version: 2,
+    version: 3,
     description: "users",
     primaryKey: "id",
     type: "object",
@@ -18,6 +18,7 @@ const USERS_SCHEMA = {
             type: "array",
             items: { type: "string" },
         },
+        state: "string",
         filters: {
             type: "object",
             properties: {
@@ -55,6 +56,7 @@ const initialize = async () => {
             migrationStrategies: {
                 1: v => v, // silly
                 2: v => v, // silly
+                3: v => v, // silly
             },
         }
     });
