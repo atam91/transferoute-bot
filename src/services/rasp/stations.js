@@ -70,9 +70,31 @@ const getByYandexCode = (yandexCode) => {
     return result;
 };
 
+const getManyByYandexCodes = (yandexCodesArray) => {
+    const result = [];
+    const yandexCodesSet = new Set(yandexCodesArray);
+
+    console.time('getManyByYandexCodes');
+    stationsStructure.countries.forEach(country => {
+        country.regions.forEach(region => {
+            region.settlements.forEach(settlement => {
+                settlement.stations.forEach(station => {
+                    if (yandexCodesSet.has(station.codes.yandex_code)) {
+                        result.push({ country, region, settlement, station });
+                    }
+                })
+            });
+        });
+    });
+    console.timeEnd('getManyByYandexCodes');
+
+    return result;
+};
+
 
 module.exports = {
     initialize,
     search,
     getByYandexCode,
+    getManyByYandexCodes,
 };

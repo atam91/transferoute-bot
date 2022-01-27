@@ -32,7 +32,9 @@ function TelegramBot (options = {}) {
 
     const TG_MESSAGE_LIMIT = 4096;
 
-    async function sendMessage(chatId, text, options = {}) {
+    async function sendMessage(chatId, message) {
+        const text = message.text || message;
+
         const _sendMessage = text =>
             axios.post(
                 `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
@@ -40,12 +42,12 @@ function TelegramBot (options = {}) {
                     chat_id: chatId,
                     parse_mode: 'Markdown',
                     text,
-                    reply_to_message_id: options.replyToMessageId || null,
-                    reply_markup: options.keyboard
+                    reply_to_message_id: message.replyToMessageId || null,
+                    reply_markup: message.keyboard
                         ? {
                             resize_keyboard: true,
                             one_time_keyboard: true,
-                            keyboard: options.keyboard,
+                            keyboard: message.keyboard,
                         }
                         : { remove_keyboard: true },
                 }

@@ -1,6 +1,7 @@
 const { helpers: tgh } = require('../base/telegramBot');
 const raspStationsService = require('./rasp/stations');
 const rxdb = require('../rxdb');
+const messagesService = require('./messages');
 
 raspStationsService.initialize() /// fixme? not pretty
     .then(() => { console.log('raspStationsService initialized'); })
@@ -12,45 +13,9 @@ rxdb.initialize() /// fixme? not pretty
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const TRANSPORT_TYPE_EMOJI_MAP = {
-    plane: '✈',
-    train: '🚅',
-    suburban: '🚇',
-    bus: '🚌',
-    water: '🚤',
-    helicopter: '🚁',
-};
-
-const stationObjectToFullNameFormatter = ({ country, region, settlement, station }) =>
-    [
-        TRANSPORT_TYPE_EMOJI_MAP[station.transport_type] || station.transport_type,
-        `*${station.title}*`,
-        '(' + [ region.title, settlement.title ].filter(v => v).map(v => `__${v}__`).join(' / ') + ')',
-    ]
-        .join(' ');
-
 const getYandexCodeFromContainingUpdate = update => tgh.getTextFromUpdate(update).split('_')[1];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-const userStations = (user) => user.get('favoriteStations')
-    .map(raspStationsService.getByYandexCode);
-
-const userStationsMessage = (user) => {
-    const stations = userStations(user);
-
-    return [
-        'Your Stations::'
-    ].concat(
-        stations.map(stObj =>
-            [
-                stationObjectToFullNameFormatter(stObj),
-                '/drop\\_' + stObj.station.codes.yandex_code,
-                '/where\\_' + stObj.station.codes.yandex_code,
-            ]
-                .join(' ')
-        )
-    ).join('\n');
-};
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const handler = (telegramBot) => async (update) => {
@@ -61,17 +26,33 @@ const handler = (telegramBot) => async (update) => {
             userId: tgh.getChatIdFromUpdate(update)
         }
     }).exec();
-    console.log('user', user);
+    ///console.log('USER', user);
     if (!user) {
         await db.users.insert({
             id: tgh.getChatIdFromUpdate(update).toString(),
             userId: tgh.getChatIdFromUpdate(update),
         })
     } else {
-        console.log('id', user.get('id'));
+        /* console.log('id', user.get('id'));
         console.log('uId', user.get('userId'));
         console.log('favoriteStations', user.get('favoriteStations'));
+        const filters = user.get('filters');
+        console.log('filters', filters);
+        console.log('filters.denyTransportType', filters.denyTransportType);
+        console.log('filters.geolocation', filters.geolocation); */
     }
+
+    /*await user.update({
+        $push: {
+            'filters.denyTransportType': 'jkl',
+        }
+    });*/
+
+    /*await user.update({
+        $set: {
+            'filters.denyTransportType': undefined,
+        }
+    });*/
 
     // console.log('UPDATE', JSON.stringify(update, null, 4));
     if (!tgh.getTextFromUpdate(update)) return;
@@ -88,12 +69,12 @@ const handler = (telegramBot) => async (update) => {
 
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                stationObjectToFullNameFormatter(stObj) + '\n' + userStationsMessage(user)
+                messagesService.stationAdded({ stObj, user })
             );
         } else {
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                '🤷🏼‍♂️ Could not find any station to add' + '\n' + userStationsMessage(user)
+                messagesService.stationNotFoundDueManipulation({ user })
             );
         }
     } else if (tgh.getTextFromUpdate(update).startsWith('/drop')) {
@@ -108,12 +89,12 @@ const handler = (telegramBot) => async (update) => {
 
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                userStationsMessage(user)
+                messagesService.stationDropped({ stObj, user })
             );
         } else {
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                '🤷🏼‍♂️ Could not find any station to drop' + '\n' + userStationsMessage(user)
+                messagesService.stationNotFoundDueManipulation({ user })
         );
         }
     } else if (tgh.getTextFromUpdate(update).startsWith('/where')) {
@@ -130,12 +111,12 @@ const handler = (telegramBot) => async (update) => {
         } else if (!stObj.station.latitude || !stObj.station.longitude) {
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                '🤷🏼‍♂️ Destination unknown'
+                messagesService.unknownGeolocation()
             );
         } else {
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                '🤷🏼‍♂️ Could not find any station'
+                messagesService.unknownStation()
             );
         }
     } else {
@@ -143,25 +124,14 @@ const handler = (telegramBot) => async (update) => {
         ///console.log('search result', stationObjects);
 
         if (stationObjects.length) {
-            const message = stationObjects
-                .map(stObj =>
-                    [
-                        stationObjectToFullNameFormatter(stObj),
-                        '/add\\_' + stObj.station.codes.yandex_code,
-                        '/where\\_' + stObj.station.codes.yandex_code,
-                    ]
-                    .join(' ')
-                )
-                .join('\n');
-
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                message
+                messagesService.foundStations({ stationObjects, user })
             );
         } else {
             await telegramBot.sendMessage(
                 tgh.getChatIdFromUpdate(update),
-                '🤷🏼‍♂️ Could not find any station' + '\n' + userStationsMessage(user)
+                messagesService.stationNotFoundAndUserStations({ user })
             );
         }
     }

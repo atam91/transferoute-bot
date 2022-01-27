@@ -6,29 +6,38 @@ addPouchPlugin(require('pouchdb-adapter-leveldb')); // leveldown adapters need t
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const USERS_SCHEMA = {
-    "title": "users schema",
-    "version": 1,
-    "description": "users",
-    "primaryKey": "id",
-    "type": "object",
-    "properties": {
-        "id": {
-            "type": "string"
+    title: "users schema",
+    version: 2,
+    description: "users",
+    primaryKey: "id",
+    type: "object",
+    properties: {
+        id: { type: "string" },
+        userId: { type: "number" },
+        favoriteStations: {
+            type: "array",
+            items: { type: "string" },
         },
-        "userId": {
-            "type": "number"
-        },
-        "favoriteStations": {
-            "type": "array",
-            "items": {
-                "type": "string",
+        filters: {
+            type: "object",
+            properties: {
+                denyTransportType: {
+                    type: "array",
+                    items: { type: "string" },
+                },
+                geolocation: {
+                    type: "object",
+                    properties: {
+                        latitude: { type: "number" },
+                        longitude: { type: "number" },
+                        radius: { type: "number" },
+                        messageId: { type: "number" },
+                    },
+                },
             },
         },
     },
-    "required": [
-        "id",
-        "userId",
-    ],
+    required: [ "id", "userId", ],
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -45,6 +54,7 @@ const initialize = async () => {
             schema: USERS_SCHEMA,
             migrationStrategies: {
                 1: v => v, // silly
+                2: v => v, // silly
             },
         }
     });
