@@ -83,7 +83,7 @@ const foundStations = ({ stationObjects, user }) => {
 
 
 const filtersMode = ({ user }) => {
-    const filters = user.get('filters');
+    const filters = user.get('filters') || {};
     const denyTransportType = filters.denyTransportType || [];
 
     return {
