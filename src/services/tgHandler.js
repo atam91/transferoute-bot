@@ -95,7 +95,7 @@ const STATE_HANDLERS = {
                 );
             }
         } else {
-            const stationObjects = raspStationsService.search( tgh.getTextFromUpdate(update) );
+            const stationObjects = raspStationsService.search( tgh.getTextFromUpdate(update), user.get('filters') );
             ///console.log('search result', stationObjects);
 
             if (stationObjects.length) {
@@ -114,21 +114,64 @@ const STATE_HANDLERS = {
 
     filters: (telegramBot) => async ({ update, user }) => {
         const text = tgh.getTextFromUpdate(update);
-        if (text.startsWith('вкл')) {
-
-        } else if (text.startsWith('выкл')) {
+        if (text.startsWith('вкл') || text.startsWith('выкл')) {
             const transport = text.split(' ').reverse()[0];
-            user.update({
-                $push: {
-                    'filters.denyTransportType': transport
-                }
-            });
+
+            if (text.startsWith('вкл')) {
+                await user.update({
+                    $set: {
+                        'filters.denyTransportType': user.get('filters').denyTransportType.filter(t => t !== transport)
+                    }
+                });
+            } else {
+                await user.update({
+                    $push: {
+                        'filters.denyTransportType': transport
+                    }
+                });
+            }
         }
 
         await telegramBot.sendMessage(
             tgh.getChatIdFromUpdate(update),
             messagesService.filtersMode({ user })
         );
+    },
+
+    filters_geolocation: (telegramBot) => async ({ update, user }, step) => {
+        false && await user.update({
+            $set: {
+                'filters.geolocation': undefined
+            }
+        })
+
+
+        const geoFilter = user.get('filters').geolocation;
+
+        geoFilter && console.log(geoFilter.latitude, geoFilter.longitude, geoFilter.messageId, geoFilter.radius);
+
+        if (geoFilter) {
+            await telegramBot.sendMessage(
+                tgh.getChatIdFromUpdate(update),
+                JSON.stringify(geoFilter, null, 4)
+            );
+        } else {
+            if (update.message.location) {
+                await user.update({
+                    $set: {
+                        'filters.geolocation.latitude': update.message.latitude,
+                        'filters.geolocation.longitude': update.message.longitude,
+                        'filters.geolocation.messageId': update.message.messageId,
+                    }
+                });
+                console.log('save location')
+            } else {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    'Геофильтр не установлен, чтобы установить пришлите местоположение\nВернуться /filters /search'
+                );
+            }
+        }
     },
 };
 

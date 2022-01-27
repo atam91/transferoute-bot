@@ -37,7 +37,9 @@ const userStationsMessage = (user) => {
                 '/where\\_' + stObj.station.codes.yandex_code,
             ]
                 .join(' ')
-        )
+        ),
+        '',
+        'фильтры /filters'
     ).join('\n');
 };
 
@@ -94,7 +96,9 @@ const filtersMode = ({ user }) => {
                     `*${transportType}*`,
                 ].join(' ')
             ),
-            '\n вернуться в режим поиска /search'
+            '',
+            'настройка геофильтра /filters\\_geolocation',
+            'вернуться в режим поиска /search'
         ].join('\n'),
 
         keyboard: Object.keys(TRANSPORT_TYPE_EMOJI_MAP).map(transportType => {

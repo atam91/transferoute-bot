@@ -1,6 +1,8 @@
 const fs = require('fs');
 const fsp = fs.promises;
 
+const { getDistanceFromLatLonInKm } = require('../../utils/geo')
+
 let stationsStructure = null;
 
 const getAllStations = async () => {
@@ -26,15 +28,20 @@ const initialize = async () => {
  */
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const search = (needle) => {
+const search = (needle, filters) => {
     const result = [];
+
+    const denyTransportType = new Set(filters.denyTransportType)
 
     console.time('search');
     stationsStructure.countries.forEach(country => {
         country.regions.forEach(region => {
             region.settlements.forEach(settlement => {
                 settlement.stations.forEach(station => {
-                    if (station.title.toLowerCase().includes(needle.toLowerCase())) {
+                    if (
+                        !denyTransportType.has(station.transport_type)
+                        && station.title.toLowerCase().includes(needle.toLowerCase())
+                    ) {
                         result.push({ country, region, settlement, station });
                     }
                 })
