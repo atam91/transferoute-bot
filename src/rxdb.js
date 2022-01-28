@@ -7,7 +7,7 @@ addPouchPlugin(require('pouchdb-adapter-leveldb')); // leveldown adapters need t
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const USERS_SCHEMA = {
     title: "users schema",
-    version: 3,
+    version: 4,
     description: "users",
     primaryKey: "id",
     type: "object",
@@ -37,6 +37,20 @@ const USERS_SCHEMA = {
                 },
             },
         },
+        routes: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    id: 'string',
+                    name: 'string',
+                    stations: {
+                        type: 'array',
+                        items: { type: "string" },
+                    },
+                },
+            },
+        },
     },
     required: [ "id", "userId", ],
 };
@@ -57,6 +71,7 @@ const initialize = async () => {
                 1: v => v, // silly
                 2: v => v, // silly
                 3: v => v, // silly
+                4: v => Object.assign(v, { routes: [] }),
             },
         }
     });

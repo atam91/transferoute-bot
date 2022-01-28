@@ -24,6 +24,13 @@ const stationObjectToFullNameFormatter = ({ country, region, settlement, station
     ]
         .join(' ');
 
+const stationObjectToShortNameFormatter = ({ country, region, settlement, station }) =>
+    [
+        TRANSPORT_TYPE_EMOJI_MAP[station.transport_type] || station.transport_type,
+        `*${station.title}*`,
+    ]
+        .join(' ');
+
 const userStationsMessage = (user) => {
     const stations = raspStationsService.getManyByYandexCodes(user.get('favoriteStations'));
 
@@ -39,7 +46,9 @@ const userStationsMessage = (user) => {
                 .join(' ')
         ),
         '',
-        'фильтры /filters'
+        'Фильтры поиска /filters',
+        '',
+        '*Отправиться в путешествие* /route',
     ).join('\n');
 };
 
@@ -115,6 +124,9 @@ const filtersMode = ({ user }) => {
 };
 
 module.exports = {
+    stationObjectToShortNameFormatter,
+    stationObjectToFullNameFormatter,
+    /////////////////////////////////////////
     stationAdded,
     stationDropped,
     stationNotFoundDueManipulation,

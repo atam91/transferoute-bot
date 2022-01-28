@@ -23,7 +23,7 @@ const parseStateLine = function(line) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const getYandexCodeFromContainingUpdate = update => tgh.getTextFromUpdate(update).split('_')[1];
+const getParameterFromContainingUpdate = update => tgh.getTextFromUpdate(update).split('_')[1];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -33,7 +33,7 @@ const STATE_HANDLERS = {
         if (!tgh.getTextFromUpdate(update)) return;
 
         if (tgh.getTextFromUpdate(update).startsWith('/add')) {
-            const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+            const stObj = raspStationsService.getByYandexCode(getParameterFromContainingUpdate(update));
 
             if (stObj) {
                 await user.update({
@@ -53,7 +53,7 @@ const STATE_HANDLERS = {
                 );
             }
         } else if (tgh.getTextFromUpdate(update).startsWith('/drop')) {
-            const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+            const stObj = raspStationsService.getByYandexCode(getParameterFromContainingUpdate(update));
 
             if (stObj) {
                 await user.update({
@@ -73,7 +73,7 @@ const STATE_HANDLERS = {
                 );
             }
         } else if (tgh.getTextFromUpdate(update).startsWith('/where')) {
-            const stObj = raspStationsService.getByYandexCode(getYandexCodeFromContainingUpdate(update));
+            const stObj = raspStationsService.getByYandexCode(getParameterFromContainingUpdate(update));
 
             if (stObj && stObj.station.latitude && stObj.station.longitude) {
                 await telegramBot.sendLocation(
@@ -229,12 +229,142 @@ const STATE_HANDLERS = {
         await user.update({
             $set: {
                 'filters.geolocation': undefined,
-                state: 'filters_geolocation',               /// fixme  seemee SIC!
+                state: 'filters_geolocation',               /// fixme  seemee SIC!      meaybe more interesting changeCurrentStateAndHandle
             }
         });
 
         await STATE_HANDLERS.filters_geolocation(telegramBot)({ update, user });
-    }
+    },
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    route: (telegramBot) => async ({ update, user }) =>  {
+        const routes = user.get('routes');
+        console.log('routes', routes, routes.length);
+
+        if (tgh.getTextFromUpdate(update).startsWith('/go')) {
+            const routeId = getParameterFromContainingUpdate(update);
+            const route = routes.find(r => r.id === routeId);
+
+            if (route) {
+                /// todo timeQuestion
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    'try get route info for ' + route.name
+                );
+
+            } else {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    '*unknown route*\nreturn: /route /search /filter'
+                );
+            }
+        } else {
+            if (routes.length) {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    [
+                        'Выберите из существующих маршрутов::',
+                        ...routes.map(r => [ r.name, `/go\\_${r.id}`, `/drop\\_${r.id}` ].join(' ')),
+                        '',
+                        'Вернуться /search /filter',
+                        '*Новый маршрут* /route\\_new'
+                    ].join('\n')
+                );
+            } else {
+                await user.update({
+                    $set: { state: 'route_new' }
+                });
+
+                await STATE_HANDLERS.route_new(telegramBot)({ update, user });
+            }
+        }
+    },
+
+    route_new: (telegramBot) => async ({ update, user }, ...routeStations) =>  {
+        const isEvenRouteStations = routeStations.length % 2 === 0;
+        let routeStationsAfter = routeStations;
+
+        console.log('routeStations', routeStations);
+
+        if (
+            tgh.getTextFromUpdate(update).startsWith('/from') && isEvenRouteStations
+            || tgh.getTextFromUpdate(update).startsWith('/to') && !isEvenRouteStations
+        ) {
+            routeStationsAfter.push( getParameterFromContainingUpdate(update) );
+
+            await user.update({
+                $set: { state: genStateLine('route_new', ...routeStationsAfter) }
+            });
+        } else if (tgh.getTextFromUpdate(update).startsWith('/finish') && routeStations.length && isEvenRouteStations) {
+            ///// SAVE /////
+            const routes = user.get('routes');
+            let name = '';
+            for (let i = 0; i < routeStations.length; i++) {
+                const stObj = raspStationsService.getByYandexCode(routeStations[i]);      /// TODO BATCH
+
+                if (i === 0) {
+                    name = messagesService.stationObjectToShortNameFormatter(stObj) + ' -> ';
+                } else if (i % 2 === 0) {
+                    name += messagesService.stationObjectToShortNameFormatter(stObj) + ' -> ';
+                }
+                if (i === routeStations.length - 1) {
+                    name += messagesService.stationObjectToShortNameFormatter(stObj);
+                }
+            }
+
+            const creatingRoute = {
+                id: routes.length ? (parseInt(routes[routes.length-1].id) + 1).toString() : '1',
+                name,
+                stations: routeStations,
+            };
+            await user.update({
+                $push: {
+                    routes: creatingRoute,
+                }
+            });
+            ////////////////////////////
+            await user.update({                             //// TODO push to timeQuestion  or /go_i
+                $set: { state: 'route' }
+            });
+
+            await STATE_HANDLERS.route(telegramBot)({ update, user });
+            return;
+        }
+
+        const isEvenRouteStationsAfter = routeStationsAfter.length % 2 === 0;
+
+        const stations = raspStationsService.getManyByYandexCodes(user.get('favoriteStations'));
+        await telegramBot.sendMessage(
+            tgh.getChatIdFromUpdate(update),
+            [
+                'Маршрут::',
+                ...routeStationsAfter.map((stCode, index) => {
+                    const stObj = raspStationsService.getByYandexCode(stCode);      /// TODO BATCH
+
+                    return [
+                        messagesService.stationObjectToShortNameFormatter(stObj),
+                        index % 2 === 0 && (index < routeStationsAfter.length - 1 ? '*===>>>*' : '*???*'),
+
+                    ].filter(v => v).join(' ') + (index % 2 !== 0 && index < routeStationsAfter.length - 1 ? '\n...' : '')
+                }),
+                '',
+                routeStationsAfter.length && isEvenRouteStationsAfter ? '/finish' : '',
+                '',
+                'Ваши сохранённые станции::',
+                ...stations.map(stObj =>
+                    [
+                        messagesService.stationObjectToShortNameFormatter(stObj),
+                        (isEvenRouteStationsAfter ? '/from\\_' : '/to\\_') + stObj.station.codes.yandex_code,
+                    ]
+                        .join(' ')
+                ),
+                '',
+                'Вернуться /route /search /filter',
+            ].join('\n')
+        );
+
+
+    },
 };
 
 const handler = (telegramBot) => async (update) => {
