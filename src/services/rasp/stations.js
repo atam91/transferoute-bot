@@ -42,10 +42,11 @@ const search = (needle, filters) => {
                     if (
                         !denyTransportType.has(station.transport_type)
                         && station.title.toLowerCase().includes(needle.toLowerCase())
-                        && (geoFilter ?
-                            geoFilter.radius
-                                && geoFilter.radius > getDistanceFromLatLonInKm(geoFilter.latitude, geoFilter.longitude, station.latitude, station.longitude)
-                            : true)
+                        && (
+                            geoFilter && geoFilter.radius ?
+                                geoFilter.radius > getDistanceFromLatLonInKm(geoFilter.latitude, geoFilter.longitude, station.latitude, station.longitude)
+                                : true
+                        )
                     ) {
                         result.push({ country, region, settlement, station });
                     }
