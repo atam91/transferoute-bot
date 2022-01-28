@@ -138,41 +138,103 @@ const STATE_HANDLERS = {
         );
     },
 
-    filters_geolocation: (telegramBot) => async ({ update, user }, step) => {
-        false && await user.update({
-            $set: {
-                'filters.geolocation': undefined
-            }
-        })
-
-
+    filters_geolocation: (telegramBot) => async ({ update, user }) => {
         const geoFilter = user.get('filters').geolocation;
 
-        geoFilter && console.log(geoFilter.latitude, geoFilter.longitude, geoFilter.messageId, geoFilter.radius);
-
-        if (geoFilter) {
-            await telegramBot.sendMessage(
-                tgh.getChatIdFromUpdate(update),
-                JSON.stringify(geoFilter, null, 4)
-            );
-        } else {
-            if (update.message.location) {
-                await user.update({
-                    $set: {
-                        'filters.geolocation.latitude': update.message.latitude,
-                        'filters.geolocation.longitude': update.message.longitude,
-                        'filters.geolocation.messageId': update.message.messageId,
-                    }
-                });
-                console.log('save location')
-            } else {
+        if (geoFilter && geoFilter.latitude && geoFilter.longitude) {
+            ///////////////////////////////////////////////////////////////////////
+            if (geoFilter.radius) {
                 await telegramBot.sendMessage(
                     tgh.getChatIdFromUpdate(update),
-                    'Геофильтр не установлен, чтобы установить пришлите местоположение\nВернуться /filters /search'
+                    {
+                        text: [
+                            `Установлен геофильтр в ${geoFilter.radius}км`,
+                            'Сбросить фильтр /drop\\_filters\\_geolocation',
+                            '',
+                            'Вернуться /filters /search'
+                        ].join('\n'),
+                        replyToMessageId: geoFilter.messageId,
+                    },
                 );
+            } else {
+                try {
+                    const radius = parseInt(tgh.getTextFromUpdate(update));
+                    console.log('GET_RADIUS', radius)
+
+                    if (radius) {
+                        await user.update({
+                            $set: {
+                                'filters.geolocation.radius': radius
+                            }
+                        });
+
+                        await telegramBot.sendMessage(                                                          /// fixme double
+                            tgh.getChatIdFromUpdate(update),
+                            {
+                                text: [
+                                    `Установлен геофильтр в ${geoFilter.radius}км`,
+                                    'Сбросить фильтр /drop\\_filters\\_geolocation',
+                                    '',
+                                    'Вернуться /filters /search'
+                                ].join('\n'),
+                                replyToMessageId: geoFilter.messageId,
+                            },
+                        );
+                    } else {
+                        await telegramBot.sendMessage(
+                            tgh.getChatIdFromUpdate(update),
+                            {
+                                text: `What? Enter thee radius of your territory in kilometers!`,
+                                replyToMessageId: geoFilter.messageId,
+                            },
+                        );
+                    }
+
+                } catch (error) {
+                    await telegramBot.sendMessage(
+                        tgh.getChatIdFromUpdate(update),
+                        `Something wrong... ` + error
+                    );
+                }
+
             }
+            ///////////////////////////////////////////////////////////////////////
+        } else if (update.message.location) {
+            await user.update({
+                $set: {
+                    'filters.geolocation': {
+                        'latitude': update.message.location.latitude,
+                        'longitude': update.message.location.longitude,
+                        'messageId': update.message.message_id,
+                    }
+                }
+            });
+
+            await telegramBot.sendMessage(
+                tgh.getChatIdFromUpdate(update),
+                {
+                    text: 'Пришлите радиус в километрах от указанной точки\nВернуться /filters /search',
+                    replyToMessageId: update.message.message_id,
+                }
+            );
+        } else {
+            await telegramBot.sendMessage(
+                tgh.getChatIdFromUpdate(update),
+                'Геофильтр не установлен, чтобы установить пришлите местоположение\nВернуться /filters /search'
+            );
         }
     },
+
+    drop_filters_geolocation: (telegramBot) => async ({ update, user }) =>  {
+        await user.update({
+            $set: {
+                'filters.geolocation': undefined,
+                state: 'filters_geolocation',               /// fixme  seemee SIC!
+            }
+        });
+
+        await STATE_HANDLERS.filters_geolocation(telegramBot)({ update, user });
+    }
 };
 
 const handler = (telegramBot) => async (update) => {

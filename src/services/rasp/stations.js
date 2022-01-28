@@ -32,6 +32,7 @@ const search = (needle, filters) => {
     const result = [];
 
     const denyTransportType = filters ? new Set(filters.denyTransportType || []) : new Set();
+    const geoFilter = filters && filters.geolocation;
 
     console.time('search');
     stationsStructure.countries.forEach(country => {
@@ -41,6 +42,10 @@ const search = (needle, filters) => {
                     if (
                         !denyTransportType.has(station.transport_type)
                         && station.title.toLowerCase().includes(needle.toLowerCase())
+                        && (geoFilter ?
+                            geoFilter.radius
+                                && geoFilter.radius > getDistanceFromLatLonInKm(geoFilter.latitude, geoFilter.longitude, station.latitude, station.longitude)
+                            : true)
                     ) {
                         result.push({ country, region, settlement, station });
                     }
