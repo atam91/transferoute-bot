@@ -1,5 +1,6 @@
 const { helpers: tgh } = require('../base/telegramBot');
 const raspStationsService = require('./rasp/stations');
+const raspScheduleService = require('./rasp/schedule');
 const rxdb = require('../rxdb');
 const messagesService = require('./messages');
 
@@ -246,10 +247,46 @@ const STATE_HANDLERS = {
             const route = routes.find(r => r.id === routeId);
 
             if (route) {
-                /// todo timeQuestion
+                const result = [];
+
+                for (let i = 0; i < route.stations.length; i++) {
+                    if (i % 2 === 0) {
+                        const from = route.stations[i];
+                        const to = route.stations[i+1];
+
+                        const data = await raspScheduleService.getSchedule({ from, to });
+
+                        result.push({
+                            fromStObj: raspStationsService.getByYandexCode(from),
+                            toStObj: raspStationsService.getByYandexCode(to),
+                            data,
+                        });
+                    }
+                }
+
+                console.log('RRRR', result);
+
+
+
+
                 await telegramBot.sendMessage(
                     tgh.getChatIdFromUpdate(update),
-                    'try get route info for ' + route.name
+                    [
+                        ...result.map(({ fromStObj, toStObj, data }) => {
+                            return [
+                                messagesService.stationObjectToShortNameFormatter(fromStObj) + ' *==>>* ' + messagesService.stationObjectToShortNameFormatter(toStObj),
+                                data.map(segment => {
+                                    const departureTime = segment.departure.split('T')[1].split('+')[0];
+                                    const arrivalTime = segment.arrival.split('T')[1].split('+')[0];
+
+                                    return `${departureTime} -> ${arrivalTime}`;
+                                }).join(' ; '),
+                                '',
+                            ].join('\n')
+                        }),
+                        '',
+                        'Вернуться /route /search /filter'
+                    ].join('\n')
                 );
 
             } else {
