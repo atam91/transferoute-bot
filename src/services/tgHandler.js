@@ -96,7 +96,15 @@ const STATE_HANDLERS = {
                 );
             }
         } else {
-            const stationObjects = raspStationsService.search( tgh.getTextFromUpdate(update), user.get('filters') );
+             const needle = tgh.getTextFromUpdate(update);
+                if (needle.length < 3) {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                   '3 symbols minimum pls'
+                );
+                        return;
+                }
+            const stationObjects = raspStationsService.search(needle,  user.get('filters') );
             ///console.log('search result', stationObjects);
 
             if (stationObjects.length) {
