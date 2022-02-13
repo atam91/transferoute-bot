@@ -469,6 +469,8 @@ const handler = (telegramBot) => async (update) => {
     }
 };
 
+console.log('test ci script');
+
 
 module.exports = {
     handler,
