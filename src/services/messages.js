@@ -71,7 +71,7 @@ const unknownStation = () => '🤷🏼‍♂️ Станция не найден
 const unknownGeolocation = () => '🤷🏼‍♂️ Локация неизвестна';
 
 const foundStations = ({ stationObjects, user }) => {
-    const stationsCodes = user.get('favoriteStations');
+    const stationsCodes = user.get('favoriteStations') || [];
 
     const text = stationObjects
         .map(stObj =>

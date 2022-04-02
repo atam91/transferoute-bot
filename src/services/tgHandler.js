@@ -26,6 +26,12 @@ const parseStateLine = function(line) {
 
 const getParameterFromContainingUpdate = update => tgh.getTextFromUpdate(update).split('_')[1];
 
+
+const getFullTimeFromIso = iso => iso.split('T')[1].split('+')[0];
+const stripTimeSeconds = time => time.replace(/\:00$/, '');
+
+const getTimeFromIso = iso => stripTimeSeconds( getFullTimeFromIso(iso) );
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -247,20 +253,25 @@ const STATE_HANDLERS = {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     route: (telegramBot) => async ({ update, user }) =>  {
-        const routes = user.get('routes');
+        const routes = user.get('routes') || [];
         console.log('routes', routes, routes.length);
 
-        if (tgh.getTextFromUpdate(update).startsWith('/go')) {
+        const text = tgh.getTextFromUpdate(update);
+        if (text.startsWith('/go_') || text.startsWith('/goback_')) {
             const routeId = getParameterFromContainingUpdate(update);
             const route = routes.find(r => r.id === routeId);
 
             if (route) {
                 const result = [];
+                let stations = JSON.parse( JSON.stringify(route.stations) );
+                if (text.startsWith('/goback_')) {
+                    stations = stations.reverse();
+                }
 
-                for (let i = 0; i < route.stations.length; i++) {
+                for (let i = 0; i < stations.length; i++) {
                     if (i % 2 === 0) {
-                        const from = route.stations[i];
-                        const to = route.stations[i+1];
+                        const from = stations[i];
+                        const to = stations[i+1];
 
                         const data = await raspScheduleService.getSchedule({ from, to });
 
@@ -272,11 +283,6 @@ const STATE_HANDLERS = {
                     }
                 }
 
-                console.log('RRRR', result);
-
-
-
-
                 await telegramBot.sendMessage(
                     tgh.getChatIdFromUpdate(update),
                     [
@@ -284,8 +290,8 @@ const STATE_HANDLERS = {
                             return [
                                 messagesService.stationObjectToShortNameFormatter(fromStObj) + ' *==>>* ' + messagesService.stationObjectToShortNameFormatter(toStObj),
                                 data.map(segment => {
-                                    const departureTime = segment.departure.split('T')[1].split('+')[0];
-                                    const arrivalTime = segment.arrival.split('T')[1].split('+')[0];
+                                    const departureTime = getTimeFromIso(segment.departure);
+                                    const arrivalTime = getTimeFromIso(segment.arrival);
 
                                     return `${departureTime} -> ${arrivalTime}`;
                                 }).join(' ; '),
@@ -309,7 +315,7 @@ const STATE_HANDLERS = {
                     tgh.getChatIdFromUpdate(update),
                     [
                         'Выберите из существующих маршрутов::',
-                        ...routes.map(r => [ r.name, `/go\\_${r.id}`, `/drop\\_${r.id}` ].join(' ')),
+                        ...routes.map(r => [ r.name, `/go\\_${r.id}`, `/goback\\_${r.id}`, `\n/drop\\_${r.id}`, '\n' ].join(' ')),
                         '',
                         'Вернуться /search /filter',
                         '*Новый маршрут* /route\\_new'
@@ -342,7 +348,7 @@ const STATE_HANDLERS = {
             });
         } else if (tgh.getTextFromUpdate(update).startsWith('/finish') && routeStations.length && isEvenRouteStations) {
             ///// SAVE /////
-            const routes = user.get('routes');
+            const routes = user.get('routes') || [];
             let name = '';
             for (let i = 0; i < routeStations.length; i++) {
                 const stObj = raspStationsService.getByYandexCode(routeStations[i]);      /// TODO BATCH
