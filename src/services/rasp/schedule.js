@@ -9,7 +9,7 @@ const defaultDate = () => new Date;
 const getSchedule = async ({ from, to }, {
     _dateTime,
     hours = 3,
-}) => {
+} = {}) => {
     const dateTime = _dateTime || defaultDate();
     const date = dateTime.toISOString().split('T')[0];
     const dateCeil = addHours(dateTime, hours);
