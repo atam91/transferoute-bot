@@ -475,7 +475,15 @@ const handler = (telegramBot) => async (update) => {
     }
 };
 
+const emergencyHandler = (telegramBot) => async (update) => {
+    await telegramBot.sendMessage(
+      tgh.getChatIdFromUpdate(update),
+      '⚠️ Sorry, transferoute-bot have some problems, and temporally turned off...'
+    );
+};
+
 
 module.exports = {
     handler,
+    emergencyHandler,
 };
