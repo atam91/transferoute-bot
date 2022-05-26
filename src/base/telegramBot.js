@@ -103,17 +103,25 @@ function TelegramBot (options = {}) {
 
     function listen() {
         axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${currentOffset}`)
+            .catch(function (error) {
+                console.log('tgCheckUpdates ERROR:' + error);
+                error.response && console.log('RESPONSE DATA:', error.response.data);
+            })
             .then(async response => {
                 const updates = response.data.result;
 
                 await Promise.all(updates.map(async update => {
-                    await handler(update);
+                    try {
+                        await handler(update);
+                    } catch (error) {
+                        console.log('HANDLER_ERROR', error);
+                    }
 
                     await updateCurrentOffset(update.update_id + 1);
                 }));
             })
             .catch(function (error) {
-                console.log('tgCheckUpdates ERROR:' + error);
+                console.log('tgHandler ERROR:' + error);
                 error.response && console.log('RESPONSE DATA:', error.response.data);
             })
             .finally(() => {

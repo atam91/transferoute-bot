@@ -1,6 +1,6 @@
 const { TELEGRAM_BOT_TOKEN } = require('./config');
 const { TelegramBot } = require('./base/telegramBot');
-const { emergencyHandler: tgHandler } = require('./services/tgHandler');
+const { handler: tgHandler } = require('./services/tgHandler');
 
 if (!TELEGRAM_BOT_TOKEN) throw new Error('Needs TELEGRAM_BOT_TOKEN');
 
@@ -15,7 +15,7 @@ console.log('Transferoute_bot initializing...');
             await tgHandler(telegramBot)(update);
         } catch (err) {
             console.log('tgBotHandler error', err);
-            throw err;  // fixme?? NOT!!!
+            //throw err;  // fixme?? NOT!!!
         }
     });
     console.log('Transferoute_bot listenning');

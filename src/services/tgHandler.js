@@ -268,41 +268,60 @@ const STATE_HANDLERS = {
                     stations = stations.reverse();
                 }
 
-                for (let i = 0; i < stations.length; i++) {
-                    if (i % 2 === 0) {
-                        const from = stations[i];
-                        const to = stations[i+1];
+                try {
+                    for (let i = 0; i < stations.length; i++) {
+                        if (i % 2 === 0) {
+                            const from = stations[i];
+                            const to = stations[i+1];
 
-                        const data = await raspScheduleService.getSchedule({ from, to });
+                            const data = await raspScheduleService.getSchedule({ from, to });
 
-                        result.push({
-                            fromStObj: raspStationsService.getByYandexCode(from),
-                            toStObj: raspStationsService.getByYandexCode(to),
-                            data,
-                        });
+                            result.push({
+                                fromStObj: raspStationsService.getByYandexCode(from),
+                                toStObj: raspStationsService.getByYandexCode(to),
+                                data,
+                            });
+                        }
+                    }
+
+                    await telegramBot.sendMessage(
+                        tgh.getChatIdFromUpdate(update),
+                        [
+                            ...result.map(({ fromStObj, toStObj, data }) => {
+                                return [
+                                    messagesService.stationObjectToShortNameFormatter(fromStObj) + ' *==>>* ' + messagesService.stationObjectToShortNameFormatter(toStObj),
+                                    data.map(segment => {
+                                        const departureTime = getTimeFromIso(segment.departure);
+                                        const arrivalTime = getTimeFromIso(segment.arrival);
+
+                                        return `${departureTime} -> ${arrivalTime}`;
+                                    }).join(' ; '),
+                                    '',
+                                ].join('\n')
+                            }),
+                            '',
+                            'Вернуться /route /search /filter'
+                        ].join('\n')
+                    );
+                } catch (error) {
+                    console.log('error_response_status', error.response.status);
+                    console.log('error_responsex_data', error.response.data);
+
+                    if (error.response.status) {
+                        const responseData = error.response.data;
+
+                        await telegramBot.sendMessage(
+                            tgh.getChatIdFromUpdate(update),
+                            [
+                                `Error ${error.response.status}`,
+                                responseData?.error?.text ? `: ${responseData.error.text}` : '',    //// fixme maybe put it into API client
+                            ].filter(v => v).join('')
+                        );
+                    } else {
+                        console.log('Unknown Error', error);   //// fixme
+                        throw error;
                     }
                 }
-
-                await telegramBot.sendMessage(
-                    tgh.getChatIdFromUpdate(update),
-                    [
-                        ...result.map(({ fromStObj, toStObj, data }) => {
-                            return [
-                                messagesService.stationObjectToShortNameFormatter(fromStObj) + ' *==>>* ' + messagesService.stationObjectToShortNameFormatter(toStObj),
-                                data.map(segment => {
-                                    const departureTime = getTimeFromIso(segment.departure);
-                                    const arrivalTime = getTimeFromIso(segment.arrival);
-
-                                    return `${departureTime} -> ${arrivalTime}`;
-                                }).join(' ; '),
-                                '',
-                            ].join('\n')
-                        }),
-                        '',
-                        'Вернуться /route /search /filter'
-                    ].join('\n')
-                );
-
             } else {
                 await telegramBot.sendMessage(
                     tgh.getChatIdFromUpdate(update),
@@ -423,13 +442,13 @@ const handler = (telegramBot) => async (update) => {
 
     console.log('UPDATE', JSON.stringify(update, null, 4));
 
-    const user = await db.users.findOne({
+    let user = await db.users.findOne({
         selector: {
             userId: tgh.getChatIdFromUpdate(update)
         }
     }).exec();
     if (!user) {
-        await db.users.insert({
+        user = await db.users.insert({
             id: tgh.getChatIdFromUpdate(update).toString(),
             userId: tgh.getChatIdFromUpdate(update),
             state: 'search',
