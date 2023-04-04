@@ -14,6 +14,7 @@ const getSchedule = async ({ from, to }, {
     hours,
     fromHours,
     toHours,
+    openInterval,
 } = {}) => {
     const dateTime = _dateTime || defaultDate();
     const date = dateTime.toISOString().split('T')[0];
@@ -28,7 +29,7 @@ const getSchedule = async ({ from, to }, {
 
     return data.segments.filter(({ departure }) => {
         return isDateBefore(dateFloor, new Date(departure))
-            && isDateAfter(dateCeil, new Date(departure));
+            && (openInterval || isDateAfter(dateCeil, new Date(departure)));
     });
 };
 

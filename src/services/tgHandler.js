@@ -50,14 +50,19 @@ const parseHoursFromText = (_text) => {
     const plusHours = text.match(/\+(\d+)(h|ч)/);
     const hours = plusHours && parseInt( plusHours[1] ) || undefined;
 
-    let fromHours, toHours;
+    let fromHours, toHours, openInterval;
     const hoursInterval = text.match(/(\d+)-(\d+)(h|ч)/);
     if (hoursInterval) {
         fromHours = hoursInterval[1];
         toHours = hoursInterval[2];
     }
+    const hoursOpenInterval = text.match(/(\d+)(h|ч)\+/);
+    if (hoursOpenInterval) {
+        fromHours = hoursOpenInterval[1];
+        openInterval = true;
+    }
 
-    return { hours, dateTime, fromHours, toHours };
+    return { hours, dateTime, fromHours, toHours, openInterval };
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -290,7 +295,7 @@ const STATE_HANDLERS = {
             const route = routes.find(r => r.id === routeId);
 
             if (route) {
-                const { hours, dateTime, fromHours, toHours } = parseHoursFromText(text);
+                const { hours, dateTime, fromHours, toHours, openInterval } = parseHoursFromText(text);
 
                 const result = [];
                 let stations = JSON.parse( JSON.stringify(route.stations) );
@@ -306,7 +311,7 @@ const STATE_HANDLERS = {
 
                             const data = await raspScheduleService.getSchedule(
                                 { from, to },
-                                { hours, dateTime, fromHours, toHours }
+                                { hours, dateTime, fromHours, toHours, openInterval }
                             );
 
                             result.push({
@@ -391,14 +396,13 @@ const STATE_HANDLERS = {
                           'For how many hours?',
                         ].join('\n'),
                         keyboard: [
-                            [
-                                '+1h',
-                                '+2h',
-                                '+3h',
-                                '+1d 9-13h',
-                                '+2д 9-13ч',
-                            ].map(v => v.toString())
-                        ]
+                            '+1h',
+                            '+2h',
+                            '+3h',
+                            '22h+',
+                            '+1d 9-13h',
+                            '+2д 9-13ч',
+                        ].map(v => [ v.toString() ])
                     }
                 );
             } else {
