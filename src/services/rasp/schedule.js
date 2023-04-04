@@ -7,7 +7,7 @@ const { YANDEX_RASP_API_KEY } = require('../../config');
 const defaultDate = () => new Date;
 
 const getSchedule = async ({ from, to }, {
-    _dateTime,
+    dateTime: _dateTime,
     hours = 3,
 } = {}) => {
     const dateTime = _dateTime || defaultDate();

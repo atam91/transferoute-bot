@@ -1,3 +1,6 @@
+const addDays = require('date-fns/addDays');
+const startOfDay = require('date-fns/startOfDay');
+
 const { helpers: tgh, TEXT_LINE_WIDTH } = require('../base/telegramBot');
 const raspStationsService = require('./rasp/stations');
 const raspScheduleService = require('./rasp/schedule');
@@ -32,6 +35,26 @@ const getFullTimeFromIso = iso => iso.split('T')[1].split('+')[0];
 const stripTimeSeconds = time => time.replace(/\:00$/, '');
 
 const getTimeFromIso = iso => stripTimeSeconds( getFullTimeFromIso(iso) );
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const parseHoursFromText = (_text) => {
+    let dateTime = new Date();
+    let text = _text.toLowerCase();
+
+    console.log('DDDDD_1', dateTime);
+
+    if (text.includes('завтра') || text.includes('tomorrow')) {
+        dateTime = addDays(dateTime, 1);                                /// fixme time
+        text = text.replace('завтра', '').replace('tomorrow', '');
+    }
+
+    console.log('DDDDD_2', dateTime);
+
+    const hours = parseInt(text) || undefined;
+
+    return { hours, dateTime };
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -263,7 +286,7 @@ const STATE_HANDLERS = {
             const route = routes.find(r => r.id === routeId);
 
             if (route) {
-                const hours = parseInt(text) || undefined;
+                const { hours, dateTime } = parseHoursFromText(text);
 
                 const result = [];
                 let stations = JSON.parse( JSON.stringify(route.stations) );
@@ -277,7 +300,7 @@ const STATE_HANDLERS = {
                             const from = stations[i];
                             const to = stations[i+1];
 
-                            const data = await raspScheduleService.getSchedule({ from, to }, { hours });
+                            const data = await raspScheduleService.getSchedule({ from, to }, { hours, dateTime });
 
                             result.push({
                                 fromStObj: raspStationsService.getByYandexCode(from),
@@ -292,6 +315,8 @@ const STATE_HANDLERS = {
                     await telegramBot.sendMessage(
                         tgh.getChatIdFromUpdate(update),
                         [
+                            `_${dateTime.toISOString().split('T')[0]}        ${hours}_`,
+                            '',
                             ...result.map(({ fromStObj, toStObj, data }) => {
                                 return [
                                     messagesService.stationObjectToShortNameFormatter(fromStObj) + ' *==>>* ' + messagesService.stationObjectToShortNameFormatter(toStObj),
@@ -302,7 +327,7 @@ const STATE_HANDLERS = {
 
                                             return `${departureTime} -> ${arrivalTime}`;
                                         }).join(SEGMENTS_DELIMITER),
-                                        70,
+                                        TEXT_LINE_WIDTH,
                                         SEGMENTS_DELIMITER
                                     ),
                                     '',
@@ -353,8 +378,12 @@ const STATE_HANDLERS = {
                 await telegramBot.sendMessage(
                     tgh.getChatIdFromUpdate(update),
                     {
-                        text: 'For how many hours?',
-                        keyboard: [ [ 1, 2, 3, 4, 5 ].map(v => v.toString()) ]
+                        text: [
+                          '*' + (new Date).toLocaleString() + '*',
+                          '',
+                          'For how many hours?',
+                        ].join('\n'),
+                        keyboard: [ [ 1, 2, 3, 'завтра 12' ].map(v => v.toString()) ]
                     }
                 );
             } else {
