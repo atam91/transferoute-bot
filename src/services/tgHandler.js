@@ -1,4 +1,4 @@
-const { helpers: tgh } = require('../base/telegramBot');
+const { helpers: tgh, TEXT_LINE_WIDTH } = require('../base/telegramBot');
 const raspStationsService = require('./rasp/stations');
 const raspScheduleService = require('./rasp/schedule');
 const rxdb = require('../rxdb');
@@ -287,18 +287,24 @@ const STATE_HANDLERS = {
                         }
                     }
 
+                    const SEGMENTS_DELIMITER = '; ';
+
                     await telegramBot.sendMessage(
                         tgh.getChatIdFromUpdate(update),
                         [
                             ...result.map(({ fromStObj, toStObj, data }) => {
                                 return [
                                     messagesService.stationObjectToShortNameFormatter(fromStObj) + ' *==>>* ' + messagesService.stationObjectToShortNameFormatter(toStObj),
-                                    data.map(segment => {
-                                        const departureTime = getTimeFromIso(segment.departure);
-                                        const arrivalTime = getTimeFromIso(segment.arrival);
+                                    ...tgh.textToChunks(
+                                        data.map(segment => {
+                                            const departureTime = getTimeFromIso(segment.departure);
+                                            const arrivalTime = getTimeFromIso(segment.arrival);
 
-                                        return `${departureTime} -> ${arrivalTime}`;
-                                    }).join('; '),
+                                            return `${departureTime} -> ${arrivalTime}`;
+                                        }).join(SEGMENTS_DELIMITER),
+                                        70,
+                                        SEGMENTS_DELIMITER
+                                    ),
                                     '',
                                 ].join('\n')
                             }),

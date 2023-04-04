@@ -3,6 +3,25 @@ const fs = require('fs');
 const axios = require('axios').default;
 
 
+const textToChunks = (text, limit, delimiter = '\n') => {
+  const chunks = [ '' ];
+  text.split(delimiter).forEach(line => {
+    const lastChunk = chunks[chunks.length - 1];
+    if (lastChunk.length && (lastChunk + delimiter + line).length < limit) {
+      chunks[chunks.length - 1] = lastChunk + delimiter + line;
+    } else if (lastChunk.length === 0) {
+      chunks[chunks.length - 1] = line;
+    } else {
+      chunks.push(line);
+    }
+  });
+
+  return chunks;
+};
+
+const TEXT_LINE_WIDTH = 70;
+
+
 function TelegramBot (options = {}) {
     const {
         TELEGRAM_BOT_TOKEN,
@@ -58,16 +77,7 @@ function TelegramBot (options = {}) {
                 });
 
         if (text.length > TG_MESSAGE_LIMIT) {
-            const chunks = [ '' ];
-            text.split('\n').forEach(line => {
-                const lastChunk = chunks[chunks.length - 1];
-                if ((lastChunk + '\n' + line).length < TG_MESSAGE_LIMIT) {
-                    chunks[chunks.length - 1] = lastChunk + '\n' + line;
-                } else {
-                    chunks.push(line);
-                }
-            });
-
+            const chunks = textToChunks(text, TG_MESSAGE_LIMIT, '\n');
             for (chunk of chunks) {
                 await _sendMessage(chunk);
             }
@@ -155,5 +165,7 @@ module.exports = {
     helpers: {
         getChatIdFromUpdate,
         getTextFromUpdate,
+        textToChunks,
     },
+    TEXT_LINE_WIDTH,
 };
