@@ -24,7 +24,8 @@ const parseStateLine = function(line) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const getParameterFromContainingUpdate = update => tgh.getTextFromUpdate(update).split('_')[1];
+const getParameterFromText = text => text.split('_')[1];
+const getParameterFromContainingUpdate = update => getParameterFromText( tgh.getTextFromUpdate(update) );
 
 
 const getFullTimeFromIso = iso => iso.split('T')[1].split('+')[0];
@@ -252,19 +253,21 @@ const STATE_HANDLERS = {
     },
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    route: (telegramBot) => async ({ update, user }) =>  {
+    route: (telegramBot) => async ({ update, user }, selectedRoute) =>  {
         const routes = user.get('routes') || [];
         console.log('routes', routes, routes.length);
 
         const text = tgh.getTextFromUpdate(update);
-        if (text.startsWith('/go_') || text.startsWith('/goback_')) {
-            const routeId = getParameterFromContainingUpdate(update);
+        if (selectedRoute) {
+            const routeId = getParameterFromText(selectedRoute);
             const route = routes.find(r => r.id === routeId);
 
             if (route) {
+                const hours = parseInt(text) || undefined;
+
                 const result = [];
                 let stations = JSON.parse( JSON.stringify(route.stations) );
-                if (text.startsWith('/goback_')) {
+                if (selectedRoute.startsWith('/goback_')) {
                     stations = stations.reverse();
                 }
 
@@ -274,7 +277,7 @@ const STATE_HANDLERS = {
                             const from = stations[i];
                             const to = stations[i+1];
 
-                            const data = await raspScheduleService.getSchedule({ from, to });
+                            const data = await raspScheduleService.getSchedule({ from, to }, { hours });
 
                             result.push({
                                 fromStObj: raspStationsService.getByYandexCode(from),
@@ -295,7 +298,7 @@ const STATE_HANDLERS = {
                                         const arrivalTime = getTimeFromIso(segment.arrival);
 
                                         return `${departureTime} -> ${arrivalTime}`;
-                                    }).join(' ; '),
+                                    }).join('; '),
                                     '',
                                 ].join('\n')
                             }),
@@ -322,6 +325,32 @@ const STATE_HANDLERS = {
                         throw error;
                     }
                 }
+            } else {
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    '*unknown route*\nreturn: /route /search /filter'
+                );
+            }
+
+            await user.update({
+                $set: { state: genStateLine('route') }
+            });
+        } else if (text.startsWith('/go_') || text.startsWith('/goback_')) {
+            const routeId = getParameterFromContainingUpdate(update);
+            const route = routes.find(r => r.id === routeId);
+
+            if (route) {
+                await user.update({
+                    $set: { state: genStateLine('route', text) }
+                });
+
+                await telegramBot.sendMessage(
+                    tgh.getChatIdFromUpdate(update),
+                    {
+                        text: 'For how many hours?',
+                        keyboard: [ [ 1, 2, 3, 4, 5 ].map(v => v.toString()) ]
+                    }
+                );
             } else {
                 await telegramBot.sendMessage(
                     tgh.getChatIdFromUpdate(update),
