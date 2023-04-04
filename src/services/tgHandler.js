@@ -42,18 +42,22 @@ const parseHoursFromText = (_text) => {
     let dateTime = new Date();
     let text = _text.toLowerCase();
 
-    console.log('DDDDD_1', dateTime);
-
-    if (text.includes('завтра') || text.includes('tomorrow')) {
-        dateTime = addDays(dateTime, 1);                                /// fixme time
-        text = text.replace('завтра', '').replace('tomorrow', '');
+    const plusDays = text.match(/\+(\d+)(d|д)/) || 0;
+    if (plusDays) {
+        dateTime = addDays(dateTime, plusDays[1]);                                /// fixme time in schedule getDate from UTC not local
     }
 
-    console.log('DDDDD_2', dateTime);
+    const plusHours = text.match(/\+(\d+)(h|ч)/);
+    const hours = plusHours && parseInt( plusHours[1] ) || undefined;
 
-    const hours = parseInt(text) || undefined;
+    let fromHours, toHours;
+    const hoursInterval = text.match(/(\d+)-(\d+)(h|ч)/);
+    if (hoursInterval) {
+        fromHours = hoursInterval[1];
+        toHours = hoursInterval[2];
+    }
 
-    return { hours, dateTime };
+    return { hours, dateTime, fromHours, toHours };
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -286,7 +290,7 @@ const STATE_HANDLERS = {
             const route = routes.find(r => r.id === routeId);
 
             if (route) {
-                const { hours, dateTime } = parseHoursFromText(text);
+                const { hours, dateTime, fromHours, toHours } = parseHoursFromText(text);
 
                 const result = [];
                 let stations = JSON.parse( JSON.stringify(route.stations) );
@@ -300,7 +304,10 @@ const STATE_HANDLERS = {
                             const from = stations[i];
                             const to = stations[i+1];
 
-                            const data = await raspScheduleService.getSchedule({ from, to }, { hours, dateTime });
+                            const data = await raspScheduleService.getSchedule(
+                                { from, to },
+                                { hours, dateTime, fromHours, toHours }
+                            );
 
                             result.push({
                                 fromStObj: raspStationsService.getByYandexCode(from),
@@ -315,7 +322,7 @@ const STATE_HANDLERS = {
                     await telegramBot.sendMessage(
                         tgh.getChatIdFromUpdate(update),
                         [
-                            `_${dateTime.toISOString().split('T')[0]}        ${hours}_`,
+                            `_${dateTime.toISOString().split('T')[0]}        ${hours || ''}   ${fromHours || ''}   ${toHours || ''}_`,
                             '',
                             ...result.map(({ fromStObj, toStObj, data }) => {
                                 return [
@@ -383,7 +390,15 @@ const STATE_HANDLERS = {
                           '',
                           'For how many hours?',
                         ].join('\n'),
-                        keyboard: [ [ 1, 2, 3, 'завтра 12' ].map(v => v.toString()) ]
+                        keyboard: [
+                            [
+                                '+1h',
+                                '+2h',
+                                '+3h',
+                                '+1d 9-13h',
+                                '+2д 9-13ч',
+                            ].map(v => v.toString())
+                        ]
                     }
                 );
             } else {
