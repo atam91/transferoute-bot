@@ -19,7 +19,7 @@ const textToChunks = (text, limit, delimiter = '\n') => {
   return chunks;
 };
 
-const TEXT_LINE_WIDTH = 70;
+const TEXT_LINE_WIDTH = 37;
 
 
 function TelegramBot (options = {}) {
