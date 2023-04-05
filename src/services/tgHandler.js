@@ -1,6 +1,5 @@
 const addDays = require('date-fns/addDays');
-const startOfDay = require('date-fns/startOfDay');
-
+const { groupBySortedField } = require('../utils/base');
 const { helpers: tgh, TEXT_LINE_WIDTH } = require('../base/telegramBot');
 const raspStationsService = require('./rasp/stations');
 const raspScheduleService = require('./rasp/schedule');
@@ -323,28 +322,6 @@ const STATE_HANDLERS = {
                     }
 
                     const SEGMENTS_DELIMITER = '; ';
-
-                    const genGetField = field => data => data[field];
-
-                    const groupBySortedField = field => data => {
-                        let current = [];
-                        const result = [ current ];
-                        let last = data[0];
-
-                        const getGroupingField = genGetField(field);
-
-                        data.forEach(item => {
-                            if (getGroupingField(item) === getGroupingField(last)) {
-                                current.push(item);
-                            } else {
-                                current = [ item ];
-                                result.push(current);
-                                last = item;
-                            }
-                        });
-
-                        return result;
-                    };
 
                     await telegramBot.sendMessage(
                         tgh.getChatIdFromUpdate(update),
