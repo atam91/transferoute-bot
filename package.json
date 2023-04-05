@@ -6,13 +6,16 @@
   "scripts": {
     "start": "node ./src/index.js",
     "start:dev": "./node_modules/.bin/nodemon ./src/index.js",
-    "test": "jest"
+    "test": "jest",
+    "prettier:check": "prettier --check '{src,tests}/**/*.{js,ts,json,yaml,yml}'",
+    "prettier:write": "prettier --write '{src,tests}/**/*.{js,ts,json,yaml,yml}'"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "jest": "^29.5.0",
-    "nodemon": "^2.0.15"
+    "nodemon": "^2.0.15",
+    "prettier": "2.8.7"
   },
   "dependencies": {
     "axios": "^0.25.0",
