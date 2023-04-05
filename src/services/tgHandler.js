@@ -324,6 +324,28 @@ const STATE_HANDLERS = {
 
                     const SEGMENTS_DELIMITER = '; ';
 
+                    const genGetField = field => data => data[field];
+
+                    const groupBySortedField = field => data => {
+                        let current = [];
+                        const result = [ current ];
+                        let last = data[0];
+
+                        const getGroupingField = genGetField(field);
+
+                        data.forEach(item => {
+                            if (getGroupingField(item) === getGroupingField(last)) {
+                                current.push(item);
+                            } else {
+                                current = [ item ];
+                                result.push(current);
+                                last = item;
+                            }
+                        });
+
+                        return result;
+                    };
+
                     await telegramBot.sendMessage(
                         tgh.getChatIdFromUpdate(update),
                         [
@@ -332,16 +354,25 @@ const STATE_HANDLERS = {
                             ...result.map(({ fromStObj, toStObj, data }) => {
                                 return [
                                     messagesService.stationObjectToShortNameFormatter(fromStObj) + ' *==>>* ' + messagesService.stationObjectToShortNameFormatter(toStObj),
-                                    ...tgh.textToChunks(
-                                        data.map(segment => {
-                                            const departureTime = getTimeFromIso(segment.departure);
-                                            const arrivalTime = getTimeFromIso(segment.arrival);
+                                            groupBySortedField('departureHour')(
+                                                data.map(segment => {
+                                                    const departureTime = getTimeFromIso(segment.departure);
+                                                    const arrivalTime = getTimeFromIso(segment.arrival);
 
-                                            return `${departureTime} -> ${arrivalTime}`;
-                                        }).join(SEGMENTS_DELIMITER),
-                                        TEXT_LINE_WIDTH,
-                                        SEGMENTS_DELIMITER
-                                    ),
+                                                    return {
+                                                        departureHour: departureTime.split(':')[0],
+                                                        text: `${departureTime} -> ${arrivalTime}`,
+                                                    };
+                                                })
+                                            ).map(groupByHour => {
+                                                return tgh.textToChunks(
+                                                    groupByHour
+                                                        .map(({ text }) => text)
+                                                        .join(SEGMENTS_DELIMITER),
+                                                    TEXT_LINE_WIDTH,
+                                                    SEGMENTS_DELIMITER
+                                                ).join('\n');
+                                            }).join('\n\n'),
                                     '',
                                 ].join('\n')
                             }),
