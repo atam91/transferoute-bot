@@ -78,7 +78,7 @@ function TelegramBot (options = {}) {
 
         if (text.length > TG_MESSAGE_LIMIT) {
             const chunks = textToChunks(text, TG_MESSAGE_LIMIT, '\n');
-            for (let chunk of chunks) {
+            for (chunk of chunks) {
                 await _sendMessage(chunk);
             }
         } else {

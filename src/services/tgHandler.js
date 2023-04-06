@@ -31,7 +31,7 @@ const getParameterFromContainingUpdate = update => getParameterFromText( tgh.get
 
 
 const getFullTimeFromIso = iso => iso.split('T')[1].split('+')[0];
-const stripTimeSeconds = time => time.replace(/:00$/, '');
+const stripTimeSeconds = time => time.replace(/\:00$/, '');
 
 const getTimeFromIso = iso => stripTimeSeconds( getFullTimeFromIso(iso) );
 
