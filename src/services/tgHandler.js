@@ -358,6 +358,7 @@ const STATE_HANDLERS = {
                         ].join('\n')
                     );
                 } catch (error) {
+                    console.log('ERRROR', error);
                     console.log('error_response_status', error.response.status);
                     console.log('error_responsex_data', error.response.data);
 
