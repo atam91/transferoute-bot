@@ -1,4 +1,4 @@
-const { groupBySortedField } = require('../../src/utils/base');
+const { groupBySortedField, sortByFields } = require('../../src/utils/base');
 
 test('groupBySortedField', () => {
     const data = [
@@ -16,4 +16,20 @@ test('groupBySortedField', () => {
         [ { a: 2, b: 3 }, { a: 2, b: 4 }, ],
         [ { a: 3, b: 5 }, ],
     ]);
+});
+
+test('sortByFields', () => {
+    let data = [
+        { a: 'aaa', b: '53546' },
+        { a: 'fff', b: 'djkhvf' },
+        { a: 'hhh', b: 'fgoijp' },
+        { a: 'terte', b: 'qqtyrtqq' },
+        { a: 'dfgs', b: 'etrt' },
+        { a: 'hhre', b: 'qqssfdqq' },
+        { a: 'zzzz', b: 'asd' },
+    ];
+    data = sortByFields([ 'a', 'b' ])(data);
+
+    console.log(data);
+
 });

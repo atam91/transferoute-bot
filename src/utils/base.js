@@ -20,7 +20,32 @@ const groupBySortedField = field => data => {
     return result;
 };
 
+const compareMany = (...compareFunctions) => (a, b) => {
+    let result = 0;
+
+    for (let i = 0; result === 0 && i < compareFunctions.length; i++) {
+        const compareFunction = compareFunctions[i];
+        result = compareFunction(a, b);
+    }
+
+    return result;
+};
+
+const compareStrings = (a, b) => a === b ? 0 : (a < b && -1 || 1);
+const sortByFields = fields => data => {
+    data.sort(
+        compareMany(
+            ...fields.map(field =>
+                (a, b) => -compareStrings(a[field], b[field])
+            )
+        )
+    );
+
+    return data;
+};
+
 
 module.exports = {
     groupBySortedField,
+    sortByFields,
 };

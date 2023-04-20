@@ -2,6 +2,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 
 const { getDistanceFromLatLonInKm } = require('../../utils/geo')
+const { sortByFields } = require('../../utils/base')
 
 let stationsStructure = null;
 
@@ -100,6 +101,7 @@ const getManyByYandexCodes = (yandexCodesArray) => {
         });
     });
     console.timeEnd('getManyByYandexCodes');
+    sortByFields([ 'transport_type', 'title' ])(result);
 
     return result;
 };
