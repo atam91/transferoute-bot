@@ -20,7 +20,7 @@ const groupBySortedField = field => data => {
     return result;
 };
 
-const compareMany = (...compareFunctions) => (a, b) => {
+const compareByMany = (...compareFunctions) => (a, b) => {
     let result = 0;
 
     for (let i = 0; result === 0 && i < compareFunctions.length; i++) {
@@ -32,12 +32,21 @@ const compareMany = (...compareFunctions) => (a, b) => {
 };
 
 const compareStrings = (a, b) => a === b ? 0 : (a < b && -1 || 1);
+
+const compareByField = (field, compareFunction = compareStrings) => (aObj, bObj) => {
+    let aValue = aObj, bValue = bObj;
+    const fieldPath = field.split('.');
+    fieldPath.forEach(prop => {
+        aValue = aValue[prop];
+        bValue = bValue[prop];
+    })
+
+    return compareFunction(aValue, bValue);
+};
 const sortByFields = fields => data => {
     data.sort(
-        compareMany(
-            ...fields.map(field =>
-                (a, b) => -compareStrings(a[field], b[field])
-            )
+        compareByMany(
+            ...fields.map(field => compareByField(field))
         )
     );
 

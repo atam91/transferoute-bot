@@ -101,7 +101,7 @@ const getManyByYandexCodes = (yandexCodesArray) => {
         });
     });
     console.timeEnd('getManyByYandexCodes');
-    sortByFields([ 'transport_type', 'title' ])(result);
+    sortByFields([ 'station.title', 'station.transport_type' ])(result);
 
     return result;
 };
