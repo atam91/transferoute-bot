@@ -33,9 +33,8 @@ test('sortByFields', () => {
         { n: 'three', t: 'type_1' },
         { n: 'four', t: 'type_2' },
     ];
-    data = sortByFields([ 'n', 't' ])(data);
 
-    console.log(222, data);
+    data = sortByFields([ 'n', 't' ])(data);
 
     expect(data).toEqual([
         { n: 'four', t: 'type_1' },
@@ -68,9 +67,8 @@ test('sortByInnerFields', () => {
         { "id": 10, "inner": { "n": "three", "t": "type_1" } },
         { "id": 11, "inner": { "n": "four", "t": "type_2" } },
     ];
-    data = sortByFields([ 'inner.n', 'inner.t' ])(data);
 
-    console.log(222, data);
+    data = sortByFields([ 'inner.n', 'inner.t' ])(data);
 
     expect(data).toEqual([
         { id: 2, inner: { n: 'four', t: 'type_1' } },
