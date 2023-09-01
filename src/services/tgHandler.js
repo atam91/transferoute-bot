@@ -297,6 +297,9 @@ const STATE_HANDLERS = {
                 const { hours, dateTime, fromHours, toHours, openInterval } = parseHoursFromText(text);
 
                 const result = [];
+
+                console.log('STATIONS', typeof route.stations, route.stations);
+
                 let stations = JSON.parse( JSON.stringify(route.stations) );
                 if (selectedRoute.startsWith('/goback_')) {
                     stations = stations.reverse();
