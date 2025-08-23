@@ -40,7 +40,7 @@ const userStationsMessage = (user) => {
         stations.map(stObj =>
             [
                 stationObjectToFullNameFormatter(stObj),
-                '/drop\\_' + stObj.station.codes.yandex_code,
+                '/dropStation\\_' + stObj.station.codes.yandex_code,
                 '/where\\_' + stObj.station.codes.yandex_code,
             ]
                 .join(' ')

@@ -91,7 +91,7 @@ const STATE_HANDLERS = {
                     messagesService.stationNotFoundDueManipulation({ user })
                 );
             }
-        } else if (tgh.getTextFromUpdate(update).startsWith('/drop')) {
+        } else if (tgh.getTextFromUpdate(update).startsWith('/dropStation')) {
             const stObj = raspStationsService.getByYandexCode(getParameterFromContainingUpdate(update));
 
             if (stObj) {
@@ -136,13 +136,13 @@ const STATE_HANDLERS = {
         } else {
              const needle = tgh.getTextFromUpdate(update);
                 if (needle.length < 3) {
-                await telegramBot.sendMessage(
-                    tgh.getChatIdFromUpdate(update),
-                   '3 symbols minimum pls'
-                );
-                        return;
+                    await telegramBot.sendMessage(
+                        tgh.getChatIdFromUpdate(update),
+                       '3 symbols minimum pls'
+                    );
+                    return;
                 }
-            const stationObjects = raspStationsService.search(needle,  user.get('filters') );
+            const stationObjects = raspStationsService.search(needle, user.get('filters') );
             ///console.log('search result', stationObjects);
 
             if (stationObjects.length) {
@@ -286,7 +286,7 @@ const STATE_HANDLERS = {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     route: (telegramBot) => async ({ update, user }, selectedRoute) =>  {
         const routes = user.get('routes') || [];
-        console.log('routes', routes, routes.length);
+        ///console.log('routes', routes, routes.length);
 
         const text = tgh.getTextFromUpdate(update);
         if (selectedRoute) {
@@ -357,7 +357,7 @@ const STATE_HANDLERS = {
                                 ].join('\n')
                             }),
                             '',
-                            'Вернуться /route /search /filter'
+                            'Вернуться /route /search'
                         ].join('\n')
                     );
                 } catch (error) {
@@ -423,16 +423,63 @@ const STATE_HANDLERS = {
                     '*unknown route*\nreturn: /route /search /filter'
                 );
             }
+        } else if (text.startsWith('/dropRoute_')) {
+          const routeId = getParameterFromContainingUpdate(update);
+
+          await user.update({
+            $set: {
+              state: 'route',
+              routes: routes.map(r => r.id === routeId ? { ...r, archived: true } : r),
+            }
+          });
+
+          await STATE_HANDLERS.route(telegramBot)(
+            {
+              update: { message: { text: '', chat: { id: user.id } } },
+              user
+            }
+          );   //// fixme EMPTY_UPDATE
+        } else if (text.startsWith('/restoreRoute_')) {
+          const routeId = getParameterFromContainingUpdate(update);
+
+          await user.update({
+            $set: {
+              state: 'route',
+              routes: routes.map(r => r.id === routeId ? { ...r, archived: false } : r),
+            }
+          });
+
+          await STATE_HANDLERS.route(telegramBot)(
+            {
+              update: { message: { text: '', chat: { id: user.id } } },
+              user
+            }
+          );   //// fixme EMPTY_UPDATE
+        } else if (text.startsWith('/archived_routes')) {
+            await telegramBot.sendMessage(
+              tgh.getChatIdFromUpdate(update),
+              [
+                'Выберите из удалённых маршрутов::',
+                ...routes
+                  .filter(r => r.archived)
+                  .map(r => [ r.name, `/go\\_${r.id}`, `/goback\\_${r.id}`, `\n/restoreRoute\\_${r.id}`, '\n' ].join(' ')),
+                '',
+                'Вернуться /route /search /filter',
+              ].join('\n')
+            );
         } else {
             if (routes.length) {
                 await telegramBot.sendMessage(
                     tgh.getChatIdFromUpdate(update),
                     [
                         'Выберите из существующих маршрутов::',
-                        ...routes.map(r => [ r.name, `/go\\_${r.id}`, `/goback\\_${r.id}`, `\n/drop\\_${r.id}`, '\n' ].join(' ')),
+                        ...routes
+                          .filter(r => !r.archived)
+                          .map(r => [ r.name, `/go\\_${r.id}`, `/goback\\_${r.id}`, `\n/dropRoute\\_${r.id}`, '\n' ].join(' ')),
                         '',
                         'Вернуться /search /filter',
-                        '*Новый маршрут* /route\\_new'
+                        '*Новый маршрут* /route\\_new',
+                        'Удалённые маршруты /archived\\_routes',
                     ].join('\n')
                 );
             } else {
