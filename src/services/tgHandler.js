@@ -321,6 +321,13 @@ const STATE_HANDLERS = {
                                 toStObj: raspStationsService.getByYandexCode(to),
                                 data,
                             });
+
+                            /** console.log(
+                              messagesService.stationObjectToShortNameFormatter( raspStationsService.getByYandexCode(from) ),
+                              ' ===> ',
+                              messagesService.stationObjectToShortNameFormatter( raspStationsService.getByYandexCode(to) ),
+                              JSON.stringify(data, null, 4)
+                            ); **/
                         }
                     }
 
@@ -340,8 +347,13 @@ const STATE_HANDLERS = {
                                                     const arrivalTime = getTimeFromIso(segment.arrival);
 
                                                     return {
+                                                        stationType: segment.from.station_type,
+                                                        threadNumber: segment.thread.number,
                                                         departureHour: departureTime.split(':')[0],
-                                                        text: `${departureTime} -> ${arrivalTime}`,
+                                                        text: [
+                                                          `${departureTime} -> ${arrivalTime}`,
+                                                          segment.from.station_type === 'bus_stop' && segment.thread.number && ` (*№${segment.thread.number}*)`
+                                                        ].filter(v => v).join('')
                                                     };
                                                 })
                                             ).map(groupByHour => {
